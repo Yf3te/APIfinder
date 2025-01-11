@@ -2,7 +2,10 @@
 **APIfinder**主要用于在网站js文件中寻找API路径，这个需要把站点的js代码拷贝到同一级目录下的**API文件夹**下
 
   只是一个半成品
-
+匹配路径的方式有：
+1. 简单的路径提取："/api"、'/api'、"api/de"、
+2. 针对< base_url+ "api/v2" >，全局检索base_url，再进行简单拼接。
+3. 
   分别由三个单独py组成
 
 -**单文件.py**   //用于在当文件下发现API路径
@@ -58,7 +61,6 @@
     }
 })();
 ```
-
 下载方式如下：
 ![image](https://github.com/user-attachments/assets/55bc2acc-ebc7-474b-a759-ff54fc3626e4)
 这不就手到擒来
@@ -67,4 +69,3 @@
 不过最好在不经常用的浏览器下载，主要是我的浏览器肯定是用了不少插件的
 ![image](https://github.com/user-attachments/assets/5721b0bd-6f64-4066-9586-b9584c50b47f)
 这会导致下载一些不属于网站的js
-'''
