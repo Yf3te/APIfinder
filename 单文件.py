@@ -53,7 +53,7 @@ for var, sub_path in matches:
 final_paths = set()
 for path in api_paths:
     # 删除包含非法字符（:）的路径
-    if any(char in path for char in ":;-.[]()*,<>{}@"):
+    if any(char in path for char in ":;-.[]()*, +#$%&=<>!\\{}|?"):
         continue
     # 替换//为/
     path = path.replace('//', '/')
