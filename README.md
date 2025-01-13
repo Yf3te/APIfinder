@@ -23,43 +23,57 @@
 ### 2、直接在浏览器中
 #### 直接使用浏览器的控制台，通过脚本获取，使用下面就行了
 
-
+注意：有时候火狐浏览器下载不了，可以使用微软官方浏览器和google下载
 ```
 (async () => {
-    // 初始化存储所有 JS 文件的链接
-    const jsFiles = new Set();
+    // 获取静态加载的 JS 文件
+    const scripts = Array.from(document.querySelectorAll('script'));
+    const staticJSFiles = scripts
+        .map(script => script.src) // 获取 src 属性
+        .filter(src => src); // 过滤没有 src 的内联脚本
 
-    // 方法 1: 提取页面上静态 script[src] 标签的链接
-    document.querySelectorAll('script[src]').forEach(script => {
-        if (script.src) jsFiles.add(script.src);
-    });
+    // 获取动态加载的 JS 文件
+    const dynamicJSFiles = performance.getEntriesByType('resource')
+        .filter(entry => entry.initiatorType === 'script') // 过滤脚本文件
+        .map(entry => entry.name); // 获取脚本文件 URL
 
-    // 方法 2: 提取页面加载的所有资源
-    performance.getEntriesByType('resource').forEach(entry => {
-        if (entry.initiatorType === 'script' && entry.name.endsWith('.js')) {
-            jsFiles.add(entry.name);
-        }
-    });
+    // 合并并去重
+    const allJSFiles = Array.from(new Set([...staticJSFiles, ...dynamicJSFiles]));
 
-    // 打印结果 (调试用)
-    console.log([...jsFiles]);
-
-    // 方法 3: 自动下载所有文件
-    for (const url of jsFiles) {
-        await downloadFile(url);
-    }
+    console.log(`共找到 ${allJSFiles.length} 个 JS 文件:`, allJSFiles);
 
     // 下载函数
-    async function downloadFile(url) {
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = url.split('/').pop(); // 使用文件名作为下载名称
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        await new Promise(resolve => setTimeout(resolve, 100)); // 防止请求过多导致的阻塞
+    const downloadFile = async (url, filename) => {
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                console.warn(`无法下载文件: ${url}`);
+                return;
+            }
+            const blob = await response.blob();
+            const a = document.createElement('a');
+            const objectURL = URL.createObjectURL(blob);
+            a.href = objectURL;
+            a.download = filename;
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(objectURL);
+        } catch (err) {
+            console.error(`下载文件 ${url} 失败:`, err);
+        }
+    };
+
+    // 下载所有文件
+    for (const file of allJSFiles) {
+        const filename = file.split('/').pop() || 'unknown.js';
+        await downloadFile(file, filename);
     }
+
+    console.log('所有 JS 文件下载完成！');
 })();
+
 ```
 下载方式如下：
 ![image](https://github.com/user-attachments/assets/55bc2acc-ebc7-474b-a759-ff54fc3626e4)
