@@ -4,6 +4,32 @@ import os
 # 用于存储最终的路径和文件名对应关系
 api_paths = {}
 
+# 原代码中的正则表达式
+original_pattern_raw = r"""
+  (?:"|')                               # Start newline delimiter
+  (
+    ((?:[a-zA-Z]{1,10}://|//)           # Match a scheme [a-Z]*1-10 or //
+    [^"'/]{1,}\.                        # Match a domainname (any character + dot)
+    [a-zA-Z]{2,}[^"']{0,})              # The domainextension and/or path
+    |
+    ((?:/|\.\./|\./)                    # Start with /,../,./
+    [^"'><,;| *()(%%$^/\\\[\]]          # Next character can't be...
+    [^"'><,;|()]{1,})                   # Rest of the characters can't be
+    |
+    ([a-zA-Z0-9_\-/]{1,}/               # Relative endpoint with /
+    [a-zA-Z0-9_\-/]{1,}                 # Resource name
+    \.(?:[a-zA-Z]{1,4}|action)          # Rest + extension (length 1-4 or action)
+    (?:[\?|/][^"|']{0,}|))              # ? mark with parameters
+    |
+    ([a-zA-Z0-9_\-]{1,}                 # filename
+    \.(?:php|asp|aspx|jsp|json|
+         action|html|js|txt|xml)             # . + extension
+    (?:\?[^"|']{0,}|))                  # ? mark with parameters
+  )
+  (?:"|')                               # End newline delimiter
+"""
+original_pattern = re.compile(original_pattern_raw, re.VERBOSE)
+
 # 定义API文件夹路径
 api_folder = 'API'
 
@@ -16,6 +42,14 @@ for root, dirs, files in os.walk(api_folder):
         try:
             with open(file_path, 'r', encoding='utf-8-sig') as f:
                 content = f.read()
+
+            # 使用原正则表达式匹配路径
+            original_matches = original_pattern.finditer(content)
+            for match in original_matches:
+                url = match.group().strip('"').strip("'")
+                if url not in api_paths:
+                    api_paths[url] = []
+                api_paths[url].append(file_path)
 
             # 匹配包含/的路径 (例如 "/fre"、"/gtr/gfr" 等)
             regex1 = r'["\'](\/[^"\']+)(?=["\'])'
@@ -81,14 +115,23 @@ final_results = set()  # 使用集合存储最终的路径和文件名，自动�
 for path, file_names in api_paths.items():
     try:
         # 删除包含非法字符（:）的路径
-        if any(char in path for char in ":;-.[]()*, +#$%&=<>!\\{}|?"):
+        if any(char in path for char in ":;[]()*, +#$%&=<>!\\{}|?"):
             continue
-        # 替换//为/
-        path = path.replace('//', '/')
         # 确保路径以/开头
         if not path.startswith('/'):
             path = '/' + path
-        # 过滤掉仅为 '/' 的路径
+        if re.match('//', path):
+            # 替换//为/
+            path = path.replace('//', '/')
+        # 替换/./为/
+        if re.match('/\./', path):
+            path = path.replace('/./', '/')
+        # 过滤包含 /@、/. 或 // 的路径
+        if re.search(r'/@|/\.|//|/_|/-', path):
+            continue  # 如果路径包含/@、/.或//，则跳过
+        # 过滤不符合原始正则表达式的路径（可选，根据您的需求决定是否保留）
+        if re.match('^/[a-zA-Z0-9]$', path):
+            continue
         if path == '/':
             continue
         # 将路径和文件名组合加入结果集合
@@ -97,9 +140,22 @@ for path, file_names in api_paths.items():
     except Exception as e:
         print(f"处理路径 {path} 时出错: {e}")
 
-# 输出结果到2.txt，指定编码为utf-8-sig以确保兼容
+
+# 定义排序函数
+def custom_sort_key(item):
+    path = item[0]
+    # 检查路径是否包含文件后缀
+    if '.' in path.rsplit('/', 1)[-1]:
+        return (1, path)
+    return (0, path)
+
+
+# 对最终结果进行排序
+sorted_results = sorted(final_results, key=custom_sort_key)
+
+# 输出结果到文件夹(带文件名).txt，指定编码为utf-8-sig以确保兼容
 with open('文件夹(带文件名).txt', 'w', encoding='utf-8-sig') as f:
-    for path, file_name in sorted(final_results):
+    for path, file_name in sorted_results:
         f.write(f"{path} -------------- {file_name}\n")
 
 print("匹配的路径和文件名已保存到 文件夹(带文件名).txt")
