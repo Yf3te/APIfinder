@@ -135,3 +135,4 @@ with open('文件夹查找.txt', 'w', encoding='utf-8-sig') as f:
         f.write(path + "\n")
 
 print("匹配的路径已保存到 文件夹查找.txt")
+os.system("python 文件夹(带文件名).py")
