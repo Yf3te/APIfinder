@@ -116,7 +116,8 @@ for path in api_paths:
         continue
     if path == '/':
         continue
-
+    if re.search(r'\.(css|png|jpg|svg)$', path):
+        continue
     final_paths.add(path)
 
 # 定义排序函数
