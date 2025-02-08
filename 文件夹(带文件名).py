@@ -134,6 +134,8 @@ for path, file_names in api_paths.items():
             continue
         if path == '/':
             continue
+        if re.search(r'\.(css|png|jpg|svg)$', path):
+            continue
         # 将路径和文件名组合加入结果集合
         for file_name in file_names:
             final_results.add((path, file_name))
